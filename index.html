@@ -168,3 +168,39 @@ function loadData(){
 
 </body>
 </html>
+
+<script>
+async function saveData(data){
+
+const token = "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";
+const repo = "eoeo380/report-test";
+
+const res = await fetch(
+`https://api.github.com/repos/${repo}/contents/data.json`
+);
+
+const file = await res.json();
+
+const updated = btoa(
+unescape(encodeURIComponent(JSON.stringify(data,null,2)))
+);
+
+await fetch(
+`https://api.github.com/repos/${repo}/contents/data.json`,
+{
+method:"PUT",
+headers:{
+Authorization:`token ${token}`,
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+message:"data update",
+content:updated,
+sha:file.sha
+})
+}
+);
+
+alert("저장 완료!");
+}
+</script>
