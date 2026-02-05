@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>재고 대시보드 (직사각형 연결형)</title>
+<title>재고 대시보드</title>
 
 <style>
 body{font-family:"맑은 고딕";background:#e9e9e9}
@@ -11,43 +11,12 @@ h1{text-align:center;letter-spacing:12px;margin:20px}
 .area{background:white;border:2px solid black;padding:25px}
 .area-title{text-align:center;margin-bottom:20px;font-weight:bold}
 
-/* 가로는 붙이고 세로는 원형 공간만큼 간격 */
-.grid{
-    display:grid;
-    grid-template-columns:repeat(6,70px);
-    justify-content:center;
-    column-gap:0;
-    row-gap:110px; /* 원형 들어갈 공간 */
-}
+.grid{display:grid;grid-template-columns:repeat(6,70px);justify-content:center;column-gap:0;row-gap:110px}
 
 .silo{position:relative;width:70px;height:120px}
+.rect{position:absolute;top:20px;left:0;width:70px;height:100px;border:2px solid black;background:white}
 
-.rect{
-    position:absolute;
-    top:20px;
-    left:0;
-    width:70px;
-    height:100px;
-    border:2px solid black;
-    background:white;
-}
-
-.circle{
-    position:absolute;
-    width:95px;
-    height:95px;
-    border-radius:50%;
-    border:2px solid black;
-    background:white;
-    left:50%;
-    transform:translateX(-50%);
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    text-align:center;
-    z-index:2;
-}
-
+.circle{position:absolute;width:95px;height:95px;border-radius:50%;border:2px solid black;background:white;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;justify-content:center;text-align:center;z-index:2}
 .top{top:-55px}
 .bottom{bottom:-55px}
 
@@ -57,6 +26,7 @@ h1{text-align:center;letter-spacing:12px;margin:20px}
 .brown{color:#8b4513;font-weight:bold}
 .orange{color:#ff7f00;font-weight:bold}
 .green{color:#2b8a3e;font-weight:bold}
+
 textarea{width:95%;height:180px;margin:20px auto;display:block}
 button{display:block;margin:10px auto;padding:10px 20px;font-size:16px}
 .datebar{text-align:center;margin:15px}
@@ -68,139 +38,117 @@ button{display:block;margin:10px auto;padding:10px 20px;font-size:16px}
 
 <div class="datebar">
 날짜 선택 : <input type="date" id="datePick">
-<button onclick="saveData()">저장</button>
-<button onclick="loadData()">불러오기</button>
+<button onclick="saveData()">GitHub 저장</button>
+<button onclick="loadData()">GitHub 불러오기</button>
 </div>
 
 <div class="wrapper" id="dashboard"></div>
 
 <h3 style="text-align:center">엑셀 그대로 붙여넣기 가능</h3>
 <textarea id="dataInput"></textarea>
-<button onclick="renderFromInput()">대시보드 생성</button>
+<button onclick="generateDashboard()">대시보드 생성</button>
 
 <script>
+
+/* ===== GitHub 설정 ===== */
+const TOKEN = "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";
+const REPO = "eoeo380/report-test";  // 본인 저장소
+
+function getFileName(){
+const d=document.getElementById('datePick').value;
+if(!d){alert('날짜 선택 필요');return null;}
+return 'data_'+d.replaceAll('-','')+'.json';
+}
+
 function colorClass(item){
-    if(["WASW","WASWP","WUSH","WUSL9.0"].includes(item)) return "blue";
-    if(["WCRS"].includes(item)) return "brown";
-    if(["YBG2","YE2","YR2","YU"].includes(item)) return "orange";
-    return "green";
+if(["WASW","WASWP","WUSH","WUSL9.0"].includes(item)) return "blue";
+if(["WCRS"].includes(item)) return "brown";
+if(["YBG2","YE2","YR2","YU"].includes(item)) return "orange";
+return "green";
 }
 
 function siloHTML(item,qty,code){
-    let cls=colorClass(item);
-    return `
-    <div class='silo'>
-        <div class='circle top'>
-            <div class='${cls}'>${item}</div>
-            <div class='qty'>${qty}</div>
-            <div class='code'>${code}</div>
-        </div>
-        <div class='rect'></div>
-        <div class='circle bottom'>
-            <div class='${cls}'>${item}</div>
-            <div class='qty'>${qty}</div>
-            <div class='code'>${code}</div>
-        </div>
-    </div>`;
+let cls=colorClass(item);
+return `<div class='silo'>
+<div class='circle top'><div class='${cls}'>${item}</div><div class='qty'>${qty}</div><div class='code'>${code}</div></div>
+<div class='rect'></div>
+<div class='circle bottom'><div class='${cls}'>${item}</div><div class='qty'>${qty}</div><div class='code'>${code}</div></div>
+</div>`;
 }
 
 function renderDashboard(data){
-    let areas={};
+let areas={};
+data.forEach(r=>{
+let area=r.code[0];
+if(!areas[area]) areas[area]=[];
+areas[area].push(siloHTML(r.item,r.qty,r.code));
+});
 
-    data.forEach(r=>{
-        let area=r.code[0];
-        if(!areas[area]) areas[area]=[];
-        areas[area].push(siloHTML(r.item,r.qty,r.code));
-    });
+let html="";
+Object.keys(areas).sort().forEach(a=>{
+html+=`<div class='area'><div class='area-title'>싸이로 ${a}</div><div class='grid'>${areas[a].join('')}</div></div>`;
+});
 
-    let html="";
-    Object.keys(areas).sort().forEach(a=>{
-        html+=`<div class='area'>
-                <div class='area-title'>싸이로 ${a}</div>
-                <div class='grid'>${areas[a].join('')}</div>
-              </div>`;
-    });
-
-    document.getElementById('dashboard').innerHTML=html;
+document.getElementById('dashboard').innerHTML=html;
 }
 
-function renderFromInput(){
-    let raw=document.getElementById('dataInput').value.trim();
-    if(!raw){alert('데이터 입력 필요');return;}
+function generateDashboard(){
+let raw=document.getElementById('dataInput').value.trim();
+let lines=raw.split(/\n+/);
+let data=[];
 
-    let lines=raw.split(/\n+/);
-    let data=[];
+lines.forEach(l=>{
+if(l.includes('장치장')||l.includes('곡종')||l.includes('재고량')) return;
+let p=l.split(/\t|,/);
+if(p.length<3) return;
 
-    lines.forEach(l=>{
-        if(l.includes('장치장') || l.includes('곡종') || l.includes('재고량')) return; // 헤더 무시
+data.push({code:p[0].trim(),item:p[1].trim(),qty:p[2].trim()});
+});
 
-        let parts=l.split(/\t|,/);
-        if(parts.length<3) return;
-
-        data.push({
-            code:parts[0].trim(),
-            item:parts[1].trim(),
-            qty:parts[2].trim()
-        });
-    });
-
-    renderDashboard(data);
+renderDashboard(data);
 }
 
-function saveData(){
-    let date=document.getElementById('datePick').value;
-    if(!date){alert('날짜 선택 필요');return;}
+/* ===== GitHub 저장 ===== */
+async function saveData(){
+const file=getFileName();
+if(!file) return;
 
-    localStorage.setItem('stock_'+date,document.getElementById('dataInput').value);
-    alert('저장 완료');
+const raw=document.getElementById('dataInput').value;
+const encoded=btoa(unescape(encodeURIComponent(raw)));
+
+let sha=null;
+try{
+const r=await fetch(`https://api.github.com/repos/${REPO}/contents/${file}`);
+if(r.ok){const j=await r.json();sha=j.sha;}
+}catch{}
+
+await fetch(`https://api.github.com/repos/${REPO}/contents/${file}`,{
+method:'PUT',
+headers:{Authorization:`token ${TOKEN}`,'Content-Type':'application/json'},
+body:JSON.stringify({message:'stock save',content:encoded,sha:sha})
+});
+
+alert('GitHub 저장 완료 (모든 PC 공유됨)');
 }
 
-function loadData(){
-    let date=document.getElementById('datePick').value;
-    let d=localStorage.getItem('stock_'+date);
+/* ===== GitHub 불러오기 ===== */
+async function loadData(){
+const file=getFileName();
+if(!file) return;
 
-    if(!d){alert('데이터 없음');return;}
+try{
+const r=await fetch(file);
+const t=await r.text();
+const decoded=decodeURIComponent(escape(atob(t)));
 
-    document.getElementById('dataInput').value=d;
-    renderFromInput();
+document.getElementById('dataInput').value=decoded;
+generateDashboard();
+}catch{
+alert('해당 날짜 데이터 없음');
 }
+}
+
 </script>
 
 </body>
 </html>
-
-<script>
-async function saveData(data){
-
-const token = "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";
-const repo = "eoeo380/report-test";
-
-const res = await fetch(
-`https://api.github.com/repos/${repo}/contents/data.json`
-);
-
-const file = await res.json();
-
-const updated = btoa(
-unescape(encodeURIComponent(JSON.stringify(data,null,2)))
-);
-
-await fetch(
-`https://api.github.com/repos/${repo}/contents/data.json`,
-{
-method:"PUT",
-headers:{
-Authorization:`token ${token}`,
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-message:"data update",
-content:updated,
-sha:file.sha
-})
-}
-);
-
-alert("저장 완료!");
-}
-</script>
