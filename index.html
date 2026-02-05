@@ -2,64 +2,96 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>재고 대시보드</title>
+<title>재고 대시보드 (엑셀 붙여넣기 전용)</title>
 
 <style>
 body{font-family:"맑은 고딕";background:#e9e9e9}
-h1{text-align:center;letter-spacing:12px;margin:20px}
-.wrapper{width:95%;margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:30px}
+h1{text-align:center;letter-spacing:10px;margin:20px}
+
+.wrapper{
+width:95%;
+margin:auto;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:30px;
+}
+
 .area{background:white;border:2px solid black;padding:25px}
 .area-title{text-align:center;margin-bottom:20px;font-weight:bold}
 
-.grid{display:grid;grid-template-columns:repeat(6,70px);justify-content:center;column-gap:0;row-gap:110px}
+.grid{
+display:grid;
+grid-template-columns:repeat(6,70px);
+justify-content:center;
+column-gap:0;
+row-gap:110px;
+}
 
 .silo{position:relative;width:70px;height:120px}
-.rect{position:absolute;top:20px;left:0;width:70px;height:100px;border:2px solid black;background:white}
 
-.circle{position:absolute;width:95px;height:95px;border-radius:50%;border:2px solid black;background:white;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;justify-content:center;text-align:center;z-index:2}
+.rect{
+position:absolute;
+top:20px;
+left:0;
+width:70px;
+height:100px;
+border:2px solid black;
+background:white;
+}
+
+.circle{
+position:absolute;
+width:95px;
+height:95px;
+border-radius:50%;
+border:2px solid black;
+background:white;
+left:50%;
+transform:translateX(-50%);
+display:flex;
+flex-direction:column;
+justify-content:center;
+text-align:center;
+}
+
 .top{top:-55px}
 .bottom{bottom:-55px}
 
 .qty{font-weight:bold;font-size:18px}
 .code{color:#6aa84f}
+
 .blue{color:#004bff;font-weight:bold}
 .brown{color:#8b4513;font-weight:bold}
 .orange{color:#ff7f00;font-weight:bold}
 .green{color:#2b8a3e;font-weight:bold}
 
-textarea{width:95%;height:180px;margin:20px auto;display:block}
-button{display:block;margin:10px auto;padding:10px 20px;font-size:16px}
-.datebar{text-align:center;margin:15px}
+textarea{
+width:95%;
+height:180px;
+margin:20px auto;
+display:block;
+font-size:14px;
+}
+
+button{
+display:block;
+margin:10px auto;
+padding:10px 20px;
+font-size:16px;
+}
 </style>
 </head>
 <body>
 
 <h1>일 일 재 고 현 황 표</h1>
 
-<div class="datebar">
-날짜 선택 : <input type="date" id="datePick">
-<button onclick="saveData()">GitHub 저장</button>
-<button onclick="loadData()">GitHub 불러오기</button>
-</div>
+<h3 style="text-align:center">엑셀 복사 → 아래 붙여넣기 → 대시보드 생성</h3>
+<textarea id="excelInput"></textarea>
+<button onclick="generateDashboard()">대시보드 생성</button>
 
 <div class="wrapper" id="dashboard"></div>
 
-<h3 style="text-align:center">엑셀 그대로 붙여넣기 가능</h3>
-<textarea id="dataInput"></textarea>
-<button onclick="generateDashboard()">대시보드 생성</button>
-
 <script>
-
-/* ===== GitHub 설정 ===== */
-const TOKEN = "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";
-const REPO = "eoeo380/report-test";  // 본인 저장소
-
-function getFileName(){
-const d=document.getElementById('datePick').value;
-if(!d){alert('날짜 선택 필요');return null;}
-return 'data_'+d.replaceAll('-','')+'.json';
-}
-
 function colorClass(item){
 if(["WASW","WASWP","WUSH","WUSL9.0"].includes(item)) return "blue";
 if(["WCRS"].includes(item)) return "brown";
@@ -70,14 +102,23 @@ return "green";
 function siloHTML(item,qty,code){
 let cls=colorClass(item);
 return `<div class='silo'>
-<div class='circle top'><div class='${cls}'>${item}</div><div class='qty'>${qty}</div><div class='code'>${code}</div></div>
+<div class='circle top'>
+<div class='${cls}'>${item}</div>
+<div class='qty'>${qty}</div>
+<div class='code'>${code}</div>
+</div>
 <div class='rect'></div>
-<div class='circle bottom'><div class='${cls}'>${item}</div><div class='qty'>${qty}</div><div class='code'>${code}</div></div>
+<div class='circle bottom'>
+<div class='${cls}'>${item}</div>
+<div class='qty'>${qty}</div>
+<div class='code'>${code}</div>
+</div>
 </div>`;
 }
 
 function renderDashboard(data){
 let areas={};
+
 data.forEach(r=>{
 let area=r.code[0];
 if(!areas[area]) areas[area]=[];
@@ -86,68 +127,42 @@ areas[area].push(siloHTML(r.item,r.qty,r.code));
 
 let html="";
 Object.keys(areas).sort().forEach(a=>{
-html+=`<div class='area'><div class='area-title'>싸이로 ${a}</div><div class='grid'>${areas[a].join('')}</div></div>`;
+html+=`<div class='area'>
+<div class='area-title'>싸이로 ${a}</div>
+<div class='grid'>${areas[a].join('')}</div>
+</div>`;
 });
 
 document.getElementById('dashboard').innerHTML=html;
 }
 
 function generateDashboard(){
-let raw=document.getElementById('dataInput').value.trim();
+let raw=document.getElementById('excelInput').value.trim();
+if(!raw){alert('데이터 없음');return;}
+
 let lines=raw.split(/\n+/);
 let data=[];
 
 lines.forEach(l=>{
 if(l.includes('장치장')||l.includes('곡종')||l.includes('재고량')) return;
+
 let p=l.split(/\t|,/);
 if(p.length<3) return;
 
-data.push({code:p[0].trim(),item:p[1].trim(),qty:p[2].trim()});
+let code=p[0].trim();
+let item=p[1].trim();
+let qty=p[2].trim().replace(/,/g,'');
+
+if(!code||!item||!qty) return;
+
+// 숫자 콤마 포맷 다시 적용
+qty=Number(qty).toLocaleString();
+
+data.push({code,item,qty});
 });
 
 renderDashboard(data);
 }
-
-/* ===== GitHub 저장 ===== */
-async function saveData(){
-const file=getFileName();
-if(!file) return;
-
-const raw=document.getElementById('dataInput').value;
-const encoded=btoa(unescape(encodeURIComponent(raw)));
-
-let sha=null;
-try{
-const r=await fetch(`https://api.github.com/repos/${REPO}/contents/${file}`);
-if(r.ok){const j=await r.json();sha=j.sha;}
-}catch{}
-
-await fetch(`https://api.github.com/repos/${REPO}/contents/${file}`,{
-method:'PUT',
-headers:{Authorization:`token ${TOKEN}`,'Content-Type':'application/json'},
-body:JSON.stringify({message:'stock save',content:encoded,sha:sha})
-});
-
-alert('GitHub 저장 완료 (모든 PC 공유됨)');
-}
-
-/* ===== GitHub 불러오기 ===== */
-async function loadData(){
-const file=getFileName();
-if(!file) return;
-
-try{
-const r=await fetch(file);
-const t=await r.text();
-const decoded=decodeURIComponent(escape(atob(t)));
-
-document.getElementById('dataInput').value=decoded;
-generateDashboard();
-}catch{
-alert('해당 날짜 데이터 없음');
-}
-}
-
 </script>
 
 </body>
