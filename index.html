@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>재고 대시보드 (직사각형 연결형)</title>
+
+<style>
+body{font-family:"맑은 고딕";background:#e9e9e9}
+h1{text-align:center;letter-spacing:12px;margin:20px}
+.wrapper{width:95%;margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:30px}
+.area{background:white;border:2px solid black;padding:25px}
+.area-title{text-align:center;margin-bottom:20px;font-weight:bold}
+
+/* 가로는 붙이고 세로는 원형 공간만큼 간격 */
+.grid{
+    display:grid;
+    grid-template-columns:repeat(6,70px);
+    justify-content:center;
+    column-gap:0;
+    row-gap:110px; /* 원형 들어갈 공간 */
+}
+
+.silo{position:relative;width:70px;height:120px}
+
+.rect{
+    position:absolute;
+    top:20px;
+    left:0;
+    width:70px;
+    height:100px;
+    border:2px solid black;
+    background:white;
+}
+
+.circle{
+    position:absolute;
+    width:95px;
+    height:95px;
+    border-radius:50%;
+    border:2px solid black;
+    background:white;
+    left:50%;
+    transform:translateX(-50%);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    text-align:center;
+    z-index:2;
+}
+
+.top{top:-55px}
+.bottom{bottom:-55px}
+
+.qty{font-weight:bold;font-size:18px}
+.code{color:#6aa84f}
+.blue{color:#004bff;font-weight:bold}
+.brown{color:#8b4513;font-weight:bold}
+.orange{color:#ff7f00;font-weight:bold}
+.green{color:#2b8a3e;font-weight:bold}
+textarea{width:95%;height:180px;margin:20px auto;display:block}
+button{display:block;margin:10px auto;padding:10px 20px;font-size:16px}
+.datebar{text-align:center;margin:15px}
+</style>
+</head>
+<body>
+
+<h1>일 일 재 고 현 황 표</h1>
+
+<div class="datebar">
+날짜 선택 : <input type="date" id="datePick">
+<button onclick="saveData()">저장</button>
+<button onclick="loadData()">불러오기</button>
+</div>
+
+<div class="wrapper" id="dashboard"></div>
+
+<h3 style="text-align:center">엑셀 그대로 붙여넣기 가능</h3>
+<textarea id="dataInput"></textarea>
+<button onclick="renderFromInput()">대시보드 생성</button>
+
+<script>
+function colorClass(item){
+    if(["WASW","WASWP","WUSH","WUSL9.0"].includes(item)) return "blue";
+    if(["WCRS"].includes(item)) return "brown";
+    if(["YBG2","YE2","YR2","YU"].includes(item)) return "orange";
+    return "green";
+}
+
+function siloHTML(item,qty,code){
+    let cls=colorClass(item);
+    return `
+    <div class='silo'>
+        <div class='circle top'>
+            <div class='${cls}'>${item}</div>
+            <div class='qty'>${qty}</div>
+            <div class='code'>${code}</div>
+        </div>
+        <div class='rect'></div>
+        <div class='circle bottom'>
+            <div class='${cls}'>${item}</div>
+            <div class='qty'>${qty}</div>
+            <div class='code'>${code}</div>
+        </div>
+    </div>`;
+}
+
+function renderDashboard(data){
+    let areas={};
+
+    data.forEach(r=>{
+        let area=r.code[0];
+        if(!areas[area]) areas[area]=[];
+        areas[area].push(siloHTML(r.item,r.qty,r.code));
+    });
+
+    let html="";
+    Object.keys(areas).sort().forEach(a=>{
+        html+=`<div class='area'>
+                <div class='area-title'>싸이로 ${a}</div>
+                <div class='grid'>${areas[a].join('')}</div>
+              </div>`;
+    });
+
+    document.getElementById('dashboard').innerHTML=html;
+}
+
+function renderFromInput(){
+    let raw=document.getElementById('dataInput').value.trim();
+    if(!raw){alert('데이터 입력 필요');return;}
+
+    let lines=raw.split(/\n+/);
+    let data=[];
+
+    lines.forEach(l=>{
+        if(l.includes('장치장') || l.includes('곡종') || l.includes('재고량')) return; // 헤더 무시
+
+        let parts=l.split(/\t|,/);
+        if(parts.length<3) return;
+
+        data.push({
+            code:parts[0].trim(),
+            item:parts[1].trim(),
+            qty:parts[2].trim()
+        });
+    });
+
+    renderDashboard(data);
+}
+
+function saveData(){
+    let date=document.getElementById('datePick').value;
+    if(!date){alert('날짜 선택 필요');return;}
+
+    localStorage.setItem('stock_'+date,document.getElementById('dataInput').value);
+    alert('저장 완료');
+}
+
+function loadData(){
+    let date=document.getElementById('datePick').value;
+    let d=localStorage.getItem('stock_'+date);
+
+    if(!d){alert('데이터 없음');return;}
+
+    document.getElementById('dataInput').value=d;
+    renderFromInput();
+}
+</script>
+
+</body>
+</html>
